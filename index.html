@@ -2,176 +2,242 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>有馬幽霊のお皿数えゲーム</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>👻 お菊の 順番皿守り 👻</title>
 <style>
-  body { margin:0; background:#1a0033; color:#fff; font-family:sans-serif; text-align:center; }
-  canvas { background:#2a1a4a; border:4px solid #ff99cc; border-radius:12px; margin:10px; }
-  h1 { color:#ff99ff; }
-  button { padding:10px 20px; font-size:18px; background:#ff66aa; color:white; border:none; border-radius:8px; cursor:pointer; }
+  body { margin:0; overflow:hidden; background:linear-gradient(#0d1b2a, #1b263b, #2a1a4a); font-family:sans-serif; color:white; }
+  #game { position:relative; width:100vw; height:100vh; }
+  #ui { position:absolute; top:10px; left:10px; z-index:100; text-shadow:0 0 8px #ff99ff; font-size:22px; }
+  #next { font-size:38px; color:#ffcc00; font-weight:bold; text-shadow:0 0 15px #ff66aa; }
+
+  #ghost {
+    position:absolute; bottom:60px; left:50%; transform:translateX(-50%);
+    font-size:130px; z-index:10; filter:drop-shadow(0 0 25px #ff99ff);
+    transition:transform 0.3s;
+  }
+
+  .plate {
+    position:absolute; font-size:64px; user-select:none;
+    text-shadow:0 0 15px #ffdd77; cursor:pointer;
+    width:85px; height:85px; display:flex; align-items:center; justify-content:center;
+    border-radius:50%; background:rgba(255,220,100,0.25);
+    transition: all 0.2s;
+  }
+
+  #hearts { font-size:32px; }
 </style>
 </head>
 <body>
-<h1>👻 有馬幽霊のお皿数えゲーム 👻</h1>
-<p>お皿を順番にタップして数えよう！（1 → 2 → ...）</p>
-<canvas id="game" width="600" height="400"></canvas>
-<button onclick="startGame()">もう一度遊ぶ</button>
+
+<div id="game">
+  <div id="ui">
+    <div>周回: <span id="round">1</span>　集めた: <span id="score">0</span>/9</div>
+    <div id="next">次: 1</div>
+    <div id="hearts">❤❤❤</div>
+  </div>
+  
+  <div id="ghost">👻</div>
+
+  <div id="startScreen" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:200;">
+    <h1>👻 お菊の 順番皿守り 👻</h1>
+    <p style="font-size:23px;">1→2→3…→9 を順番に！<br>欲しいお皿を逃さないでね</p>
+    <button onclick="startGame()" style="font-size:28px;padding:18px 50px;background:#ff66aa;border:none;border-radius:999px;color:white;margin-top:30px;cursor:pointer;">スタート</button>
+  </div>
+
+  <div id="gameOverScreen" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);flex-direction:column;justify-content:center;align-items:center;z-index:200;color:#ff99ff;">
+    <h1 id="resultTitle">💦 一枚足りなぁぁい…</h1>
+    <p id="finalScore" style="font-size:32px;"></p>
+    <button onclick="restartGame()" style="font-size:24px;padding:15px 40px;background:#ff99cc;border:none;border-radius:15px;color:white;cursor:pointer;">もう一度遊ぶ</button>
+  </div>
+</div>
 
 <script>
-// シンプルなCanvasゲーム
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-
+let nextNumber = 1;
 let score = 0;
-let currentCount = 1;
-let plates = [];
-let gameOver = false;
-let ghostY = 150; // お菊のY位置（浮遊感）
+let round = 1;
+let life = 3;
+let anger = 0;
+let gameOverFlag = true;
+let speedMultiplier = 1;
 
-class Plate {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.radius = 35;
-    this.number = null;
+const game = document.getElementById("game");
+const ghost = document.getElementById("ghost");
+const scoreEl = document.getElementById("score");
+const roundEl = document.getElementById("round");
+const nextEl = document.getElementById("next");
+const heartsEl = document.getElementById("hearts");
+
+function updateUI() {
+  scoreEl.textContent = score;
+  roundEl.textContent = round;
+  nextEl.textContent = `次: ${nextNumber}`;
+  
+  let hearts = "❤".repeat(life) + "♡".repeat(3 - life);
+  heartsEl.textContent = hearts;
+}
+
+function getNextPlateNumber() {
+  if (Math.random() < 0.68) return nextNumber;
+  if (Math.random() < 0.6) return Math.max(1, nextNumber - 1 + Math.floor(Math.random() * 3));
+  return Math.floor(Math.random() * 9) + 1;
+}
+
+function createPlate() {
+  if (gameOverFlag) return;
+
+  const plate = document.createElement("div");
+  plate.className = "plate";
+  
+  const num = getNextPlateNumber();
+  plate.textContent = num;
+  plate.dataset.number = num;
+
+  let x = Math.random() * (window.innerWidth - 110);
+  let y = -90;
+  plate.style.left = `${x}px`;
+  plate.style.top = `${y}px`;
+  plate.style.transform = `rotate(${Math.random()*40-20}deg)`;
+
+  if (num === nextNumber) {
+    plate.style.boxShadow = "0 0 30px gold";
+    plate.style.background = "rgba(255,240,100,0.4)";
   }
-}
 
-function randomPlates() {
-  plates = [];
-  for (let i = 0; i < 9; i++) {
-    const p = new Plate(100 + Math.random()*400, 100 + Math.random()*200);
-    p.number = i + 1;
-    plates.push(p);
-  }
-}
+  game.appendChild(plate);
 
-function drawGhost() {
-  // かわいい幽霊（シンプル描画）
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.ellipse(120, ghostY, 50, 60, 0, 0, Math.PI*2);
-  ctx.fill();
-  
-  // 目
-  ctx.fillStyle = '#000';
-  ctx.beginPath(); ctx.arc(100, ghostY-15, 8, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(140, ghostY-15, 8, 0, Math.PI*2); ctx.fill();
-  
-  // 口（表情）
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  if (score > 5) {
-    ctx.arc(120, ghostY+10, 12, 0.2, Math.PI-0.2); // 笑顔
-  } else {
-    ctx.moveTo(105, ghostY+15); ctx.lineTo(135, ghostY+15); // 普通
-  }
-  ctx.stroke();
-}
+  let speed = (2.4 + Math.random() * 1.6) * speedMultiplier;
 
-function drawPlate(p) {
-  ctx.fillStyle = '#ffdd77';
-  ctx.beginPath();
-  ctx.ellipse(p.x, p.y, p.radius, p.radius*0.6, 0, 0, Math.PI*2);
-  ctx.fill();
-  
-  ctx.strokeStyle = '#cc9900';
-  ctx.lineWidth = 8;
-  ctx.stroke();
-  
-  ctx.fillStyle = '#333';
-  ctx.font = 'bold 24px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(p.number, p.x, p.y + 8);
-}
+  const fall = setInterval(() => {
+    y += speed;
+    plate.style.top = `${y}px`;
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // 背景（井戸っぽく）
-  ctx.fillStyle = '#331a4d';
-  ctx.fillRect(0, 300, canvas.width, 100);
-  
-  drawGhost();
-  
-  plates.forEach(p => {
-    if (p.number >= currentCount) drawPlate(p); // まだ数えてない皿だけ表示
-  });
-  
-  ctx.fillStyle = '#ff99ff';
-  ctx.font = 'bold 28px sans-serif';
-  ctx.fillText(`数えた: ${currentCount-1} / 9`, 300, 50);
-  
-  if (gameOver) {
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#ff6699';
-    ctx.font = 'bold 40px sans-serif';
-    ctx.fillText('ゲームオーバー…', 300, 180);
-    ctx.font = '24px sans-serif';
-    ctx.fillText('お菊ちゃんが悲しんでる…', 300, 230);
-  } else if (currentCount > 9) {
-    ctx.fillStyle = '#99ffcc';
-    ctx.font = 'bold 40px sans-serif';
-    ctx.fillText('🎉 お菊ちゃん大喜び！ 🎉', 300, 180);
-  }
-}
+    if (y > window.innerHeight - 160) {
+      clearInterval(fall);
+      const num = parseInt(plate.dataset.number);
+      plate.remove();
 
-function checkTap(x, y) {
-  if (gameOver || currentCount > 9) return;
-  
-  for (let i = 0; i < plates.length; i++) {
-    const p = plates[i];
-    if (p.number === currentCount) {
-      const dist = Math.hypot(p.x - x, p.y - y);
-      if (dist < p.radius + 20) {
-        currentCount++;
-        score++;
-        ghostY = 140 + Math.sin(score) * 10; // ちょっと浮かぶ
-        if (currentCount > 9) {
-          // クリア
-        }
-        return;
+      if (num === nextNumber) {
+        missPlate();
       }
     }
-  }
-  
-  // 間違えた
-  gameOver = true;
+  }, 16);
+
+  plate.addEventListener("pointerdown", () => {
+    if (gameOverFlag) return;
+
+    const tapped = parseInt(plate.dataset.number);
+
+    if (tapped === nextNumber) {
+      score++;
+      nextNumber = nextNumber >= 9 ? 1 : nextNumber + 1;
+
+      plate.style.transition = "all 0.3s";
+      plate.style.transform = "scale(2.2) rotate(45deg)";
+      plate.style.opacity = "0";
+      setTimeout(() => plate.remove(), 300);
+
+      ghost.style.transform = "translateX(-50%) scale(1.28)";
+      setTimeout(() => ghost.style.transform = "translateX(-50%)", 220);
+
+      if (score % 9 === 0) {
+        specialNinth();   // 9枚目専用演出
+        levelUp();        // その後にレベルアップ
+      }
+    } else {
+      plate.style.background = "rgba(255,80,80,0.9)";
+      plate.style.transform = "scale(0.7)";
+      setTimeout(() => plate.remove(), 250);
+
+      anger++;
+      ghost.style.transform = "translateX(-50%) scale(0.85)";
+      setTimeout(() => ghost.style.transform = "translateX(-50%)", 400);
+
+      if (anger >= 3) {
+        missPlate();
+        anger = 0;
+      }
+    }
+    updateUI();
+  });
 }
 
-canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  checkTap(x, y);
-});
+function missPlate() {
+  life--;
+  anger = 0;
+  ghost.style.transform = "translateX(-50%) scale(0.7)";
+  setTimeout(() => ghost.style.transform = "translateX(-50%)", 400);
+  updateUI();
+  if (life <= 0) endGame();
+}
 
-// タッチ対応
-canvas.addEventListener('touchstart', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  const x = touch.clientX - rect.left;
-  const y = touch.clientY - rect.top;
-  checkTap(x, y);
-  e.preventDefault();
-});
+function levelUp() {
+  round++;
+  speedMultiplier += 0.4;
+  score = 0;
+  nextNumber = 1;
+  updateUI();
+}
+
+function specialNinth() {
+  setTimeout(() => {
+    document.body.style.transition = "background 1.2s";
+    document.body.style.background = "#0a0014";
+    
+    ghost.style.fontSize = "170px";
+    
+    setTimeout(() => {
+      ghost.innerHTML = "九枚……";
+      ghost.style.fontSize = "52px";
+      ghost.style.color = "#ff99ff";
+    }, 700);
+
+    setTimeout(() => {
+      ghost.innerHTML = "あれ？";
+    }, 1900);
+
+    setTimeout(() => {
+      ghost.innerHTML = "一枚足りないぃぃぃ！！";
+      ghost.style.fontSize = "56px";
+      speedMultiplier += 1.3; // 超高速化
+    }, 3000);
+  }, 300);
+}
+
+let spawnTimer;
+function startSpawning() {
+  if (spawnTimer) clearInterval(spawnTimer);
+  spawnTimer = setInterval(() => {
+    createPlate();
+    if (Math.random() < 0.28) setTimeout(createPlate, 280);
+  }, 760);
+}
 
 function startGame() {
-  score = 0;
-  currentCount = 1;
-  gameOver = false;
-  ghostY = 150;
-  randomPlates();
-  gameLoop();
+  document.getElementById("startScreen").style.display = "none";
+  nextNumber = 1; score = 0; round = 1; life = 3; anger = 0;
+  speedMultiplier = 1;
+  gameOverFlag = false;
+  ghost.textContent = "👻";
+  ghost.style.fontSize = "130px";
+  document.body.style.background = "";
+  updateUI();
+  startSpawning();
 }
 
-function gameLoop() {
-  draw();
-  requestAnimationFrame(gameLoop);
+function endGame() {
+  gameOverFlag = true;
+  clearInterval(spawnTimer);
+  document.getElementById("resultTitle").textContent = "💦 一枚足りなぁぁい…";
+  document.getElementById("finalScore").innerHTML = `周回 ${round-1} まで到達<br>合計 ${ (round-1)*9 + score } 枚`;
+  document.getElementById("gameOverScreen").style.display = "flex";
 }
 
-startGame();
+function restartGame() {
+  document.getElementById("gameOverScreen").style.display = "none";
+  startGame();
+}
+
+updateUI();
 </script>
 </body>
 </html>
