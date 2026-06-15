@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>有馬幽霊のお皿数えゲーム</title>
+<style>
+  body { margin:0; background:#1a0033; color:#fff; font-family:sans-serif; text-align:center; }
+  canvas { background:#2a1a4a; border:4px solid #ff99cc; border-radius:12px; margin:10px; }
+  h1 { color:#ff99ff; }
+  button { padding:10px 20px; font-size:18px; background:#ff66aa; color:white; border:none; border-radius:8px; cursor:pointer; }
+</style>
+</head>
+<body>
+<h1>👻 有馬幽霊のお皿数えゲーム 👻</h1>
+<p>お皿を順番にタップして数えよう！（1 → 2 → ...）</p>
+<canvas id="game" width="600" height="400"></canvas>
+<button onclick="startGame()">もう一度遊ぶ</button>
+
+<script>
+// シンプルなCanvasゲーム
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+let score = 0;
+let currentCount = 1;
+let plates = [];
+let gameOver = false;
+let ghostY = 150; // お菊のY位置（浮遊感）
+
+class Plate {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 35;
+    this.number = null;
+  }
+}
+
+function randomPlates() {
+  plates = [];
+  for (let i = 0; i < 9; i++) {
+    const p = new Plate(100 + Math.random()*400, 100 + Math.random()*200);
+    p.number = i + 1;
+    plates.push(p);
+  }
+}
+
+function drawGhost() {
+  // かわいい幽霊（シンプル描画）
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(120, ghostY, 50, 60, 0, 0, Math.PI*2);
+  ctx.fill();
+  
+  // 目
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(100, ghostY-15, 8, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(140, ghostY-15, 8, 0, Math.PI*2); ctx.fill();
+  
+  // 口（表情）
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  if (score > 5) {
+    ctx.arc(120, ghostY+10, 12, 0.2, Math.PI-0.2); // 笑顔
+  } else {
+    ctx.moveTo(105, ghostY+15); ctx.lineTo(135, ghostY+15); // 普通
+  }
+  ctx.stroke();
+}
+
+function drawPlate(p) {
+  ctx.fillStyle = '#ffdd77';
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y, p.radius, p.radius*0.6, 0, 0, Math.PI*2);
+  ctx.fill();
+  
+  ctx.strokeStyle = '#cc9900';
+  ctx.lineWidth = 8;
+  ctx.stroke();
+  
+  ctx.fillStyle = '#333';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(p.number, p.x, p.y + 8);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // 背景（井戸っぽく）
+  ctx.fillStyle = '#331a4d';
+  ctx.fillRect(0, 300, canvas.width, 100);
+  
+  drawGhost();
+  
+  plates.forEach(p => {
+    if (p.number >= currentCount) drawPlate(p); // まだ数えてない皿だけ表示
+  });
+  
+  ctx.fillStyle = '#ff99ff';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText(`数えた: ${currentCount-1} / 9`, 300, 50);
+  
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ff6699';
+    ctx.font = 'bold 40px sans-serif';
+    ctx.fillText('ゲームオーバー…', 300, 180);
+    ctx.font = '24px sans-serif';
+    ctx.fillText('お菊ちゃんが悲しんでる…', 300, 230);
+  } else if (currentCount > 9) {
+    ctx.fillStyle = '#99ffcc';
+    ctx.font = 'bold 40px sans-serif';
+    ctx.fillText('🎉 お菊ちゃん大喜び！ 🎉', 300, 180);
+  }
+}
+
+function checkTap(x, y) {
+  if (gameOver || currentCount > 9) return;
+  
+  for (let i = 0; i < plates.length; i++) {
+    const p = plates[i];
+    if (p.number === currentCount) {
+      const dist = Math.hypot(p.x - x, p.y - y);
+      if (dist < p.radius + 20) {
+        currentCount++;
+        score++;
+        ghostY = 140 + Math.sin(score) * 10; // ちょっと浮かぶ
+        if (currentCount > 9) {
+          // クリア
+        }
+        return;
+      }
+    }
+  }
+  
+  // 間違えた
+  gameOver = true;
+}
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  checkTap(x, y);
+});
+
+// タッチ対応
+canvas.addEventListener('touchstart', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  checkTap(x, y);
+  e.preventDefault();
+});
+
+function startGame() {
+  score = 0;
+  currentCount = 1;
+  gameOver = false;
+  ghostY = 150;
+  randomPlates();
+  gameLoop();
+}
+
+function gameLoop() {
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+startGame();
+</script>
+</body>
+</html>
