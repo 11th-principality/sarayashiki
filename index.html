@@ -11,7 +11,7 @@
 
   body {
     overflow: hidden;
-    background: #0a0a1a;
+    background: #050515; /* より深い闇夜の青黒 */
     font-family: 'Hina Mincho', 'Sawarabi Mincho', serif;
     color: white;
     user-select: none;
@@ -21,25 +21,18 @@
   /* ── 背景 ── */
   #bg {
     position: fixed; inset: 0; z-index: 0;
-
-    /* ========================================
-       🖼️ 背景画像 → bg.jpg を同じフォルダに置く
-          縦長 1080×1920px 推奨
-       ======================================== */
     background-image: url("bg.png");
     background-size: cover;
     background-position: center top;
-
-    /* bg.jpg がない場合のフォールバック色 */
-    background-color: #0a0a1a;
+    background-color: #050515;
   }
-  /* 障子格子オーバーレイ（背景画像の上に薄くかかる） */
+  /* 障子格子オーバーレイ（青紫に映えるよう、少し寒色寄りに変更） */
   #bg::before {
     content: '';
     position: absolute; inset: 0;
     background:
-      repeating-linear-gradient(0deg,   transparent 0px, transparent 58px,  rgba(255,220,180,0.04) 58px,  rgba(255,220,180,0.04) 60px),
-      repeating-linear-gradient(90deg,  transparent 0px, transparent 118px, rgba(255,220,180,0.03) 118px, rgba(255,220,180,0.03) 120px);
+      repeating-linear-gradient(0deg,   transparent 0px, transparent 58px,  rgba(180,200,255,0.03) 58px,  rgba(180,200,255,0.03) 60px),
+      repeating-linear-gradient(90deg,  transparent 0px, transparent 118px, rgba(180,200,255,0.02) 118px, rgba(180,200,255,0.02) 120px);
     pointer-events: none;
   }
 
@@ -56,25 +49,25 @@
   }
   #ui-left { display: flex; flex-direction: column; gap: 4px; }
   #ui-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-  .ui-label { font-size: 13px; color: rgba(255,200,180,0.7); letter-spacing: 0.1em; }
-  #round-val { font-size: 20px; color: #ffcc88; text-shadow: 0 0 8px #ff9933; }
-  #score-val { font-size: 20px; color: #ffcc88; }
+  .ui-label { font-size: 13px; color: rgba(180,200,255,0.7); letter-spacing: 0.1em; } /* 暖色から青紫系へ */
+  #round-val { font-size: 20px; color: #88ccff; text-shadow: 0 0 8px #3399ff; } /* オレンジから青へ */
+  #score-val { font-size: 20px; color: #88ccff; } /* オレンジから青へ */
   #next-wrap {
     text-align: center; padding: 6px 18px;
-    background: rgba(255,150,200,0.12);
-    border: 1px solid rgba(255,150,200,0.35);
+    background: rgba(150,180,255,0.12); /* ピンクから薄い青紫へ */
+    border: 1px solid rgba(150,180,255,0.35);
     border-radius: 10px;
   }
-  #next-label { font-size: 12px; color: rgba(255,180,220,0.7); letter-spacing: 0.15em; }
+  #next-label { font-size: 12px; color: rgba(180,200,255,0.7); letter-spacing: 0.15em; }
   #next-num {
-    font-size: 46px; line-height: 1; color: #ffe0f0;
-    text-shadow: 0 0 20px #ff66aa, 0 0 40px #ff3388;
+    font-size: 46px; line-height: 1; color: #e0f0ff;
+    text-shadow: 0 0 20px #66aaff, 0 0 40px #3388ff; /* ピンクから青のネオンへ */
     font-weight: bold;
   }
-  #hearts { font-size: 26px; letter-spacing: 4px; }
+  #hearts { font-size: 26px; letter-spacing: 4px; color: #9966ff; } /* 命の灯火を妖しい紫に */
   #combo-wrap {
-    font-size: 13px; color: #ffdd55;
-    text-shadow: 0 0 8px #ffaa00;
+    font-size: 13px; color: #55ffdd; /* 黄色からシアン（青緑）へ */
+    text-shadow: 0 0 8px #00aaff;
     min-height: 18px; text-align: right;
   }
 
@@ -87,25 +80,15 @@
     transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
     pointer-events: none;
   }
-  /*
-     ========================================
-     🖼️ お菊ちゃんイラスト（4種・全て PNG 透過）
-        okiku_normal.png  通常
-        okiku_smile.png   正解タップ時
-        okiku_angry.png   誤タップ / 9枚演出
-        okiku_sad.png     ミス / ゲームオーバー
-        推奨サイズ: 600×900px
-     ========================================
-  */
   #ghost-img {
     width: min(220px, 38vw);
-    filter: drop-shadow(0 0 20px rgba(200,140,255,0.6));
+    filter: drop-shadow(0 0 20px rgba(140,180,255,0.6)); /* 紫がかった妖光 */
     display: block;
   }
   #ghost-emoji {
     font-size: clamp(80px, 18vw, 140px);
     display: none;
-    filter: drop-shadow(0 0 20px #cc88ff);
+    filter: drop-shadow(0 0 20px #88ccff);
   }
 
   /* ── お皿 ── */
@@ -117,27 +100,21 @@
     position: relative; width: 80px; height: 80px;
     display: flex; align-items: center; justify-content: center;
   }
-  /*
-     ========================================
-     🖼️ お皿イラスト
-        plate.png
-        推奨サイズ: 300×300px（正方形・PNG 透過）
-     ========================================
-  */
   .plate-img { width: 80px; height: 80px; object-fit: contain; }
   .plate-emoji { font-size: 58px; display: none; }
   .plate-num {
     position: absolute;
-    font-size: 26px; font-weight: bold; color: #3a1a00;
-    text-shadow: 1px 1px 0 rgba(255,200,100,0.8);
+    font-size: 26px; font-weight: bold; color: #001a3a; /* 茶色から深い紺色へ */
+    text-shadow: 1px 1px 0 rgba(100,200,255,0.8);
     pointer-events: none;
   }
   .plate.target .plate-inner {
     animation: targetPulse 0.9s ease-in-out infinite alternate;
   }
+  /* ターゲット皿の光彩をゴールドから妖しい青紫へ */
   @keyframes targetPulse {
-    from { filter: drop-shadow(0 0 10px gold); }
-    to   { filter: drop-shadow(0 0 24px #ffee55) drop-shadow(0 0 8px #ff9900); }
+    from { filter: drop-shadow(0 0 10px #00ffff); }
+    to   { filter: drop-shadow(0 0 24px #55eeff) drop-shadow(0 0 8px #0099ff); }
   }
 
   /* ── エフェクト ── */
@@ -150,38 +127,38 @@
     0%   { opacity: 1; transform: translateY(0) scale(1); }
     100% { opacity: 0; transform: translateY(-70px) scale(1.4); }
   }
-  .effect.good  { color: #ffee55; text-shadow: 0 0 12px #ffaa00; }
-  .effect.bad   { color: #ff6666; text-shadow: 0 0 10px #ff0000; }
-  .effect.combo { color: #ff99ff; text-shadow: 0 0 12px #cc00ff; font-size: 34px; }
+  .effect.good  { color: #55eeff; text-shadow: 0 0 12px #0099ff; } /* 黄からシアンへ */
+  .effect.bad   { color: #ff66aa; text-shadow: 0 0 10px #ff0055; } /* 赤から禍々しいピンク赤へ */
+  .effect.combo { color: #cc99ff; text-shadow: 0 0 12px #9900ff; font-size: 34px; } /* 紫を強調 */
 
   /* ── 九枚オーバーレイ ── */
   #ninth-overlay {
     display: none; position: fixed; inset: 0; z-index: 300;
-    background: rgba(0,0,0,0.92);
+    background: rgba(5,5,15,0.95); /* 真っ黒から深い藍色の闇へ */
     flex-direction: column; justify-content: center; align-items: center; gap: 16px;
   }
   #ninth-overlay.show { display: flex; }
   #ninth-text {
-    font-size: clamp(28px, 7vw, 52px); color: #ff99ff;
-    text-shadow: 0 0 30px #cc00ff; text-align: center; line-height: 1.6;
+    font-size: clamp(28px, 7vw, 52px); color: #99ccff;
+    text-shadow: 0 0 30px #3300ff; text-align: center; line-height: 1.6;
   }
 
   /* ── オーバーレイ共通 ── */
   .overlay {
     display: none; position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,0.93);
+    background: rgba(5,5,15,0.93);
     flex-direction: column; justify-content: center; align-items: center;
     gap: 20px; padding: 24px; text-align: center;
   }
   .overlay.show { display: flex; }
-  .overlay h1 { font-size: clamp(22px, 5vw, 42px); color: #ffaacc; text-shadow: 0 0 20px #ff33aa; }
-  .overlay p  { font-size: clamp(15px, 3.5vw, 22px); color: rgba(255,200,220,0.85); line-height: 1.7; }
+  .overlay h1 { font-size: clamp(22px, 5vw, 42px); color: #aaccff; text-shadow: 0 0 20px #33aaff; } /* タイトルを青く */
+  .overlay p  { font-size: clamp(15px, 3.5vw, 22px); color: rgba(200,220,255,0.85); line-height: 1.7; }
   .btn {
     font-family: inherit; font-size: clamp(18px, 4vw, 24px);
     padding: 14px 44px;
-    background: linear-gradient(135deg, #cc3377, #ff66aa);
+    background: linear-gradient(135deg, #333399, #6666ff); /* ボタンをピンクから深みのある青紫グラデに */
     border: none; border-radius: 999px; color: white; cursor: pointer;
-    box-shadow: 0 0 24px rgba(255,100,170,0.5); letter-spacing: 0.08em;
+    box-shadow: 0 0 24px rgba(100,100,255,0.5); letter-spacing: 0.08em;
     transition: transform 0.15s;
   }
   .btn:active { transform: scale(0.95); }
@@ -189,7 +166,7 @@
   /* ── ミスフラッシュ ── */
   #miss-flash {
     position: fixed; inset: 0; z-index: 150;
-    background: rgba(255,0,0,0.25); pointer-events: none;
+    background: rgba(0,0,255,0.15); pointer-events: none; /* ダメージの瞬間を赤から「ゾクッとする青」に */
     opacity: 0; transition: opacity 0.08s;
   }
   #miss-flash.active { opacity: 1; }
@@ -201,8 +178,8 @@
   }
   #progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #ff66aa, #ffcc00);
-    transition: width 0.3s ease; box-shadow: 0 0 8px #ff66aa;
+    background: linear-gradient(90deg, #6666ff, #00ffff); /* ピンク黄から紫・シアンのグラデへ */
+    transition: width 0.3s ease; box-shadow: 0 0 8px #6666ff;
   }
 
   /* ── ミュートボタン ── */
@@ -215,13 +192,6 @@
 </head>
 <body>
 
-<!-- =====================================================
-     🔊 音声ファイル（同じフォルダに置いてください）
-     bgm.mp3        BGM（ループ再生）
-     sfx_good.mp3   正解タップ音
-     sfx_bad.mp3    ミス・誤タップ音
-     sfx_ninth.mp3  9枚達成時の演出音
-  ===================================================== -->
 <audio id="audio-bgm"   src="bgm.mp3"       loop preload="auto"></audio>
 <audio id="audio-good"  src="sfx_good.mp3"       preload="auto"></audio>
 <audio id="audio-bad"   src="sfx_bad.mp3"        preload="auto"></audio>
@@ -242,8 +212,7 @@
       <div id="next-num">1</div>
     </div>
     <div id="ui-right">
-      <div id="hearts">❤❤❤</div>
-      <div id="combo-wrap"></div>
+      <div id="hearts">❤❤庫</div> <div id="combo-wrap"></div>
     </div>
   </div>
 
@@ -262,7 +231,7 @@
     <p>
       1 → 2 → 3 … → 9 の順番に<br>
       落ちてくるお皿をタップしてください<br><br>
-      <span style="color:#ff9988;font-size:0.85em">間違えたり、逃したりすると❤が減ります</span>
+      <span style="color:#aaccff;font-size:0.85em">間違えたり、逃したりすると❤が減ります</span>
     </p>
     <button class="btn" onclick="startGame()">は じ め る</button>
   </div>
@@ -300,11 +269,6 @@ const missFlash   = document.getElementById("miss-flash");
 const ninthOverlay = document.getElementById("ninth-overlay");
 const ninthText   = document.getElementById("ninth-text");
 
-/* ─────────────────────────────────────────
-   🔊 サウンド
-   audio要素を取得するだけ。差し替えはHTMLの
-   <audio src="..."> を変えるだけでOK
-───────────────────────────────────────── */
 const SND = {
   bgm:   document.getElementById("audio-bgm"),
   good:  document.getElementById("audio-good"),
@@ -315,7 +279,7 @@ const SND = {
 function playBGM() {
   SND.bgm.currentTime = 0;
   SND.bgm.volume = 0.6;
-  SND.bgm.play().catch(() => {});   // autoplay制限への対策
+  SND.bgm.play().catch(() => {});
 }
 function stopBGM() {
   SND.bgm.pause();
@@ -336,9 +300,6 @@ function toggleMute() {
   document.getElementById("mute-btn").textContent = isMuted ? "🔇" : "🔊";
 }
 
-/* ─────────────────────────────────────────
-   🖼️ お菊ちゃん 表情切り替え
-───────────────────────────────────────── */
 const FACES = {
   normal: "okiku_normal.png",
   smile:  "okiku_smile.png",
@@ -360,7 +321,6 @@ function ghostBounce(scale = 1.22) {
   setTimeout(() => { wrap.style.transform = "translateX(-50%) scale(1)"; }, 220);
 }
 
-/* ── UI ── */
 function updateUI() {
   scoreEl.textContent = `${score}/9`;
   roundEl.textContent = round;
@@ -370,7 +330,6 @@ function updateUI() {
   comboEl.textContent = combo >= 3 ? `🔥 ${combo} コンボ！` : "";
 }
 
-/* ── エフェクト ── */
 function showEffect(text, x, y, type) {
   const el = document.createElement("div");
   el.className = `effect ${type}`;
@@ -381,7 +340,6 @@ function showEffect(text, x, y, type) {
   setTimeout(() => el.remove(), 750);
 }
 
-/* ── お皿生成 ── */
 function getPlateNumber() {
   const r = Math.random();
   if (r < 0.62) return nextNumber;
@@ -401,7 +359,6 @@ function createPlate() {
   const inner = document.createElement("div");
   inner.className = "plate-inner";
 
-  /* お皿イラスト */
   const img = document.createElement("img");
   img.className = "plate-img";
   img.src = "plate.png";
@@ -484,7 +441,6 @@ function createPlate() {
   });
 }
 
-/* ── ミス ── */
 function missPlate(x = window.innerWidth / 2, y = window.innerHeight / 2) {
   life--; combo = 0;
   playSFX("bad");
@@ -497,7 +453,6 @@ function missPlate(x = window.innerWidth / 2, y = window.innerHeight / 2) {
   if (life <= 0) endGame();
 }
 
-/* ── 9枚達成演出 ── */
 function triggerNinthScene() {
   gameOverFlag = true;
   clearInterval(spawnTimer);
@@ -532,7 +487,6 @@ function levelUp() {
   startSpawning();
 }
 
-/* ── スポーン ── */
 function startSpawning() {
   if (spawnTimer) clearInterval(spawnTimer);
   const interval = Math.max(420, 760 - (round - 1) * 30);
@@ -543,7 +497,6 @@ function startSpawning() {
   }, interval);
 }
 
-/* ── ゲームライフサイクル ── */
 function startGame() {
   document.getElementById("startScreen").classList.remove("show");
   document.getElementById("mute-btn").style.display = "block";
