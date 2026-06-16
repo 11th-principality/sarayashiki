@@ -2,83 +2,390 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>👻 お菊の 順番皿守り 👻</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>👻有馬幽霊の皿数え</title>
 <style>
-  body { margin:0; overflow:hidden; background:linear-gradient(#0d1b2a, #1b263b, #2a1a4a); font-family:sans-serif; color:white; }
-  #game { position:relative; width:100vw; height:100vh; }
-  #ui { position:absolute; top:10px; left:10px; z-index:100; text-shadow:0 0 8px #ff99ff; font-size:22px; }
-  #next { font-size:38px; color:#ffcc00; font-weight:bold; text-shadow:0 0 15px #ff66aa; }
+  @import url('https://fonts.googleapis.com/css2?family=Hina+Mincho&family=Sawarabi+Mincho&display=swap');
 
-  #ghost {
-    position:absolute; bottom:60px; left:50%; transform:translateX(-50%);
-    font-size:130px; z-index:10; filter:drop-shadow(0 0 25px #ff99ff);
-    transition:transform 0.3s;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    overflow: hidden;
+    background: #0a0a1a;
+    font-family: 'Hina Mincho', 'Sawarabi Mincho', serif;
+    color: white;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
+  /* ── 背景 ── */
+  #bg {
+    position: fixed; inset: 0; z-index: 0;
+
+    /* ========================================
+       🖼️ 背景画像 → bg.jpg を同じフォルダに置く
+          縦長 1080×1920px 推奨
+       ======================================== */
+    background-image: url("bg.png");
+    background-size: cover;
+    background-position: center top;
+
+    /* bg.jpg がない場合のフォールバック色 */
+    background-color: #0a0a1a;
+  }
+  /* 障子格子オーバーレイ（背景画像の上に薄くかかる） */
+  #bg::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(0deg,   transparent 0px, transparent 58px,  rgba(255,220,180,0.04) 58px,  rgba(255,220,180,0.04) 60px),
+      repeating-linear-gradient(90deg,  transparent 0px, transparent 118px, rgba(255,220,180,0.03) 118px, rgba(255,220,180,0.03) 120px);
+    pointer-events: none;
+  }
+
+  /* ── ゲームコンテナ ── */
+  #game { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+
+  /* ── UI ── */
+  #ui {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 12px 16px 8px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    z-index: 100;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  #ui-left { display: flex; flex-direction: column; gap: 4px; }
+  #ui-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .ui-label { font-size: 13px; color: rgba(255,200,180,0.7); letter-spacing: 0.1em; }
+  #round-val { font-size: 20px; color: #ffcc88; text-shadow: 0 0 8px #ff9933; }
+  #score-val { font-size: 20px; color: #ffcc88; }
+  #next-wrap {
+    text-align: center; padding: 6px 18px;
+    background: rgba(255,150,200,0.12);
+    border: 1px solid rgba(255,150,200,0.35);
+    border-radius: 10px;
+  }
+  #next-label { font-size: 12px; color: rgba(255,180,220,0.7); letter-spacing: 0.15em; }
+  #next-num {
+    font-size: 46px; line-height: 1; color: #ffe0f0;
+    text-shadow: 0 0 20px #ff66aa, 0 0 40px #ff3388;
+    font-weight: bold;
+  }
+  #hearts { font-size: 26px; letter-spacing: 4px; }
+  #combo-wrap {
+    font-size: 13px; color: #ffdd55;
+    text-shadow: 0 0 8px #ffaa00;
+    min-height: 18px; text-align: right;
+  }
+
+  /* ── お菊ちゃん ── */
+  #ghost-wrap {
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+    pointer-events: none;
+  }
+  /*
+     ========================================
+     🖼️ お菊ちゃんイラスト（4種・全て PNG 透過）
+        okiku_normal.png  通常
+        okiku_smile.png   正解タップ時
+        okiku_angry.png   誤タップ / 9枚演出
+        okiku_sad.png     ミス / ゲームオーバー
+        推奨サイズ: 600×900px
+     ========================================
+  */
+  #ghost-img {
+    width: min(220px, 38vw);
+    filter: drop-shadow(0 0 20px rgba(200,140,255,0.6));
+    display: block;
+  }
+  #ghost-emoji {
+    font-size: clamp(80px, 18vw, 140px);
+    display: none;
+    filter: drop-shadow(0 0 20px #cc88ff);
+  }
+
+  /* ── お皿 ── */
   .plate {
-    position:absolute; font-size:64px; user-select:none;
-    text-shadow:0 0 15px #ffdd77; cursor:pointer;
-    width:85px; height:85px; display:flex; align-items:center; justify-content:center;
-    border-radius:50%; background:rgba(255,220,100,0.25);
-    transition: all 0.2s;
+    position: absolute; cursor: pointer; touch-action: none; z-index: 20;
+    transition: opacity 0.22s, transform 0.22s;
+  }
+  .plate-inner {
+    position: relative; width: 80px; height: 80px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /*
+     ========================================
+     🖼️ お皿イラスト
+        plate.png
+        推奨サイズ: 300×300px（正方形・PNG 透過）
+     ========================================
+  */
+  .plate-img { width: 80px; height: 80px; object-fit: contain; }
+  .plate-emoji { font-size: 58px; display: none; }
+  .plate-num {
+    position: absolute;
+    font-size: 26px; font-weight: bold; color: #3a1a00;
+    text-shadow: 1px 1px 0 rgba(255,200,100,0.8);
+    pointer-events: none;
+  }
+  .plate.target .plate-inner {
+    animation: targetPulse 0.9s ease-in-out infinite alternate;
+  }
+  @keyframes targetPulse {
+    from { filter: drop-shadow(0 0 10px gold); }
+    to   { filter: drop-shadow(0 0 24px #ffee55) drop-shadow(0 0 8px #ff9900); }
   }
 
-  #hearts { font-size:32px; }
+  /* ── エフェクト ── */
+  .effect {
+    position: absolute; pointer-events: none; z-index: 50;
+    font-size: 28px; font-weight: bold;
+    animation: effectFly 0.75s ease-out forwards;
+  }
+  @keyframes effectFly {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-70px) scale(1.4); }
+  }
+  .effect.good  { color: #ffee55; text-shadow: 0 0 12px #ffaa00; }
+  .effect.bad   { color: #ff6666; text-shadow: 0 0 10px #ff0000; }
+  .effect.combo { color: #ff99ff; text-shadow: 0 0 12px #cc00ff; font-size: 34px; }
+
+  /* ── 九枚オーバーレイ ── */
+  #ninth-overlay {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.92);
+    flex-direction: column; justify-content: center; align-items: center; gap: 16px;
+  }
+  #ninth-overlay.show { display: flex; }
+  #ninth-text {
+    font-size: clamp(28px, 7vw, 52px); color: #ff99ff;
+    text-shadow: 0 0 30px #cc00ff; text-align: center; line-height: 1.6;
+  }
+
+  /* ── オーバーレイ共通 ── */
+  .overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.93);
+    flex-direction: column; justify-content: center; align-items: center;
+    gap: 20px; padding: 24px; text-align: center;
+  }
+  .overlay.show { display: flex; }
+  .overlay h1 { font-size: clamp(22px, 5vw, 42px); color: #ffaacc; text-shadow: 0 0 20px #ff33aa; }
+  .overlay p  { font-size: clamp(15px, 3.5vw, 22px); color: rgba(255,200,220,0.85); line-height: 1.7; }
+  .btn {
+    font-family: inherit; font-size: clamp(18px, 4vw, 24px);
+    padding: 14px 44px;
+    background: linear-gradient(135deg, #cc3377, #ff66aa);
+    border: none; border-radius: 999px; color: white; cursor: pointer;
+    box-shadow: 0 0 24px rgba(255,100,170,0.5); letter-spacing: 0.08em;
+    transition: transform 0.15s;
+  }
+  .btn:active { transform: scale(0.95); }
+
+  /* ── ミスフラッシュ ── */
+  #miss-flash {
+    position: fixed; inset: 0; z-index: 150;
+    background: rgba(255,0,0,0.25); pointer-events: none;
+    opacity: 0; transition: opacity 0.08s;
+  }
+  #miss-flash.active { opacity: 1; }
+
+  /* ── 進捗バー ── */
+  #progress-wrap {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 5px; background: rgba(255,255,255,0.08); z-index: 100;
+  }
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #ff66aa, #ffcc00);
+    transition: width 0.3s ease; box-shadow: 0 0 8px #ff66aa;
+  }
+
+  /* ── ミュートボタン ── */
+  #mute-btn {
+    position: fixed; top: 12px; right: 12px; z-index: 300;
+    font-size: 22px; background: none; border: none; cursor: pointer; opacity: 0.7;
+    display: none;
+  }
 </style>
 </head>
 <body>
 
+<!-- =====================================================
+     🔊 音声ファイル（同じフォルダに置いてください）
+     bgm.mp3        BGM（ループ再生）
+     sfx_good.mp3   正解タップ音
+     sfx_bad.mp3    ミス・誤タップ音
+     sfx_ninth.mp3  9枚達成時の演出音
+  ===================================================== -->
+<audio id="audio-bgm"   src="bgm.mp3"       loop preload="auto"></audio>
+<audio id="audio-good"  src="sfx_good.mp3"       preload="auto"></audio>
+<audio id="audio-bad"   src="sfx_bad.mp3"        preload="auto"></audio>
+<audio id="audio-ninth" src="sfx_ninth.mp3"      preload="auto"></audio>
+
+<div id="bg"></div>
 <div id="game">
+
   <div id="ui">
-    <div>周回: <span id="round">1</span>　集めた: <span id="score">0</span>/9</div>
-    <div id="next">次: 1</div>
-    <div id="hearts">❤❤❤</div>
+    <div id="ui-left">
+      <span class="ui-label">周回</span>
+      <span id="round-val">1</span>
+      <span class="ui-label" style="margin-top:4px">枚数</span>
+      <span id="score-val">0/9</span>
+    </div>
+    <div id="next-wrap">
+      <div id="next-label">次のお皿</div>
+      <div id="next-num">1</div>
+    </div>
+    <div id="ui-right">
+      <div id="hearts">❤❤❤</div>
+      <div id="combo-wrap"></div>
+    </div>
   </div>
-  
-  <div id="ghost">👻</div>
 
-  <div id="startScreen" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:200;">
-    <h1>👻 お菊の 順番皿守り 👻</h1>
-    <p style="font-size:23px;">1→2→3…→9 を順番に！<br>欲しいお皿を逃さないでね</p>
-    <button onclick="startGame()" style="font-size:28px;padding:18px 50px;background:#ff66aa;border:none;border-radius:999px;color:white;margin-top:30px;cursor:pointer;">スタート</button>
+  <div id="ghost-wrap">
+    <img id="ghost-img" src="okiku_normal.png" alt="お菊"
+      onerror="this.style.display='none'; document.getElementById('ghost-emoji').style.display='block';">
+    <div id="ghost-emoji">👻</div>
   </div>
 
-  <div id="gameOverScreen" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);flex-direction:column;justify-content:center;align-items:center;z-index:200;color:#ff99ff;">
+  <div id="miss-flash"></div>
+  <div id="progress-wrap"><div id="progress-bar" style="width:0%"></div></div>
+  <button id="mute-btn" onclick="toggleMute()">🔊</button>
+
+  <div class="overlay show" id="startScreen">
+    <h1>👻 お菊の<br>順番皿守り</h1>
+    <p>
+      1 → 2 → 3 … → 9 の順番に<br>
+      落ちてくるお皿をタップしてね<br><br>
+      <span style="color:#ff9988;font-size:0.85em">間違えたり、逃したりすると❤が減るよ</span>
+    </p>
+    <button class="btn" onclick="startGame()">は じ め る</button>
+  </div>
+
+  <div class="overlay" id="gameOverScreen">
     <h1 id="resultTitle">💦 一枚足りなぁぁい…</h1>
-    <p id="finalScore" style="font-size:32px;"></p>
-    <button onclick="restartGame()" style="font-size:24px;padding:15px 40px;background:#ff99cc;border:none;border-radius:15px;color:white;cursor:pointer;">もう一度遊ぶ</button>
+    <p id="finalScore"></p>
+    <button class="btn" onclick="restartGame()">もう一度</button>
   </div>
+
+  <div id="ninth-overlay">
+    <div id="ninth-text"></div>
+  </div>
+
 </div>
 
 <script>
-let nextNumber = 1;
-let score = 0;
-let round = 1;
-let life = 3;
-let anger = 0;
-let gameOverFlag = true;
-let speedMultiplier = 1;
+/* ── STATE ── */
+let nextNumber = 1, score = 0, totalScore = 0;
+let round = 1, life = 3, anger = 0, combo = 0;
+let gameOverFlag = true, speedMultiplier = 1, spawnTimer = null;
+let isMuted = false;
 
-const game = document.getElementById("game");
-const ghost = document.getElementById("ghost");
-const scoreEl = document.getElementById("score");
-const roundEl = document.getElementById("round");
-const nextEl = document.getElementById("next");
-const heartsEl = document.getElementById("hearts");
+/* ── DOM ── */
+const game        = document.getElementById("game");
+const ghostImg    = document.getElementById("ghost-img");
+const ghostEmoji  = document.getElementById("ghost-emoji");
+const scoreEl     = document.getElementById("score-val");
+const roundEl     = document.getElementById("round-val");
+const nextNumEl   = document.getElementById("next-num");
+const heartsEl    = document.getElementById("hearts");
+const comboEl     = document.getElementById("combo-wrap");
+const progressBar = document.getElementById("progress-bar");
+const missFlash   = document.getElementById("miss-flash");
+const ninthOverlay = document.getElementById("ninth-overlay");
+const ninthText   = document.getElementById("ninth-text");
 
-function updateUI() {
-  scoreEl.textContent = score;
-  roundEl.textContent = round;
-  nextEl.textContent = `次: ${nextNumber}`;
-  
-  let hearts = "❤".repeat(life) + "♡".repeat(3 - life);
-  heartsEl.textContent = hearts;
+/* ─────────────────────────────────────────
+   🔊 サウンド
+   audio要素を取得するだけ。差し替えはHTMLの
+   <audio src="..."> を変えるだけでOK
+───────────────────────────────────────── */
+const SND = {
+  bgm:   document.getElementById("audio-bgm"),
+  good:  document.getElementById("audio-good"),
+  bad:   document.getElementById("audio-bad"),
+  ninth: document.getElementById("audio-ninth"),
+};
+
+function playBGM() {
+  SND.bgm.currentTime = 0;
+  SND.bgm.volume = 0.6;
+  SND.bgm.play().catch(() => {});   // autoplay制限への対策
+}
+function stopBGM() {
+  SND.bgm.pause();
+  SND.bgm.currentTime = 0;
+}
+function playSFX(key) {
+  if (isMuted) return;
+  const s = SND[key];
+  if (!s) return;
+  s.currentTime = 0;
+  s.volume = key === "bgm" ? 0.6 : 0.85;
+  s.play().catch(() => {});
 }
 
-function getNextPlateNumber() {
-  if (Math.random() < 0.68) return nextNumber;
-  if (Math.random() < 0.6) return Math.max(1, nextNumber - 1 + Math.floor(Math.random() * 3));
+function toggleMute() {
+  isMuted = !isMuted;
+  SND.bgm.volume = isMuted ? 0 : 0.6;
+  document.getElementById("mute-btn").textContent = isMuted ? "🔇" : "🔊";
+}
+
+/* ─────────────────────────────────────────
+   🖼️ お菊ちゃん 表情切り替え
+───────────────────────────────────────── */
+const FACES = {
+  normal: "okiku_normal.png",
+  smile:  "okiku_smile.png",
+  angry:  "okiku_angry.png",
+  sad:    "okiku_sad.png",
+};
+const FACE_EMOJI = { normal:"👻", smile:"😄", angry:"😠", sad:"😢" };
+
+function setFace(face) {
+  if (ghostImg.style.display !== "none") {
+    ghostImg.src = FACES[face] || FACES.normal;
+  } else {
+    ghostEmoji.textContent = FACE_EMOJI[face] || "👻";
+  }
+}
+function ghostBounce(scale = 1.22) {
+  const wrap = document.getElementById("ghost-wrap");
+  wrap.style.transform = `translateX(-50%) scale(${scale})`;
+  setTimeout(() => { wrap.style.transform = "translateX(-50%) scale(1)"; }, 220);
+}
+
+/* ── UI ── */
+function updateUI() {
+  scoreEl.textContent = `${score}/9`;
+  roundEl.textContent = round;
+  nextNumEl.textContent = nextNumber;
+  heartsEl.textContent = "❤".repeat(life) + "♡".repeat(Math.max(0, 3 - life));
+  progressBar.style.width = `${(score / 9) * 100}%`;
+  comboEl.textContent = combo >= 3 ? `🔥 ${combo} コンボ！` : "";
+}
+
+/* ── エフェクト ── */
+function showEffect(text, x, y, type) {
+  const el = document.createElement("div");
+  el.className = `effect ${type}`;
+  el.textContent = text;
+  el.style.left = `${x}px`;
+  el.style.top  = `${y}px`;
+  game.appendChild(el);
+  setTimeout(() => el.remove(), 750);
+}
+
+/* ── お皿生成 ── */
+function getPlateNumber() {
+  const r = Math.random();
+  if (r < 0.62) return nextNumber;
+  if (r < 0.82) return Math.max(1, Math.min(9, nextNumber + Math.floor(Math.random() * 3) - 1));
   return Math.floor(Math.random() * 9) + 1;
 }
 
@@ -87,153 +394,187 @@ function createPlate() {
 
   const plate = document.createElement("div");
   plate.className = "plate";
-  
-  const num = getNextPlateNumber();
-  plate.textContent = num;
+  const num = getPlateNumber();
   plate.dataset.number = num;
+  if (num === nextNumber) plate.classList.add("target");
 
-  let x = Math.random() * (window.innerWidth - 110);
-  let y = -90;
+  const inner = document.createElement("div");
+  inner.className = "plate-inner";
+
+  /* お皿イラスト */
+  const img = document.createElement("img");
+  img.className = "plate-img";
+  img.src = "plate.png";
+  const emoji = document.createElement("div");
+  emoji.className = "plate-emoji";
+  emoji.textContent = "🍽️";
+  img.onerror = () => { img.style.display = "none"; emoji.style.display = "block"; };
+
+  const numEl = document.createElement("div");
+  numEl.className = "plate-num";
+  numEl.textContent = num;
+
+  inner.append(img, emoji, numEl);
+  plate.appendChild(inner);
+
+  const margin = 90;
+  const x = margin + Math.random() * (window.innerWidth - margin * 2 - 80);
+  let y = -95;
   plate.style.left = `${x}px`;
-  plate.style.top = `${y}px`;
-  plate.style.transform = `rotate(${Math.random()*40-20}deg)`;
-
-  if (num === nextNumber) {
-    plate.style.boxShadow = "0 0 30px gold";
-    plate.style.background = "rgba(255,240,100,0.4)";
-  }
-
+  plate.style.top  = `${y}px`;
+  plate.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
   game.appendChild(plate);
 
-  let speed = (2.4 + Math.random() * 1.6) * speedMultiplier;
-
-  const fall = setInterval(() => {
+  const speed = (2.2 + Math.random() * 1.8) * speedMultiplier;
+  const fallId = setInterval(() => {
     y += speed;
     plate.style.top = `${y}px`;
-
-    if (y > window.innerHeight - 160) {
-      clearInterval(fall);
-      const num = parseInt(plate.dataset.number);
-      plate.remove();
-
-      if (num === nextNumber) {
-        missPlate();
+    if (y > window.innerHeight - 100) {
+      clearInterval(fallId);
+      if (!plate.dataset.tapped && parseInt(plate.dataset.number) === nextNumber) {
+        missPlate(x + 40, window.innerHeight - 110);
       }
+      plate.remove();
     }
   }, 16);
+  plate.dataset.fallId = fallId;
 
   plate.addEventListener("pointerdown", () => {
-    if (gameOverFlag) return;
+    if (gameOverFlag || plate.dataset.tapped) return;
+    plate.dataset.tapped = "1";
+    clearInterval(parseInt(plate.dataset.fallId));
 
     const tapped = parseInt(plate.dataset.number);
+    const px = parseFloat(plate.style.left);
+    const py = parseFloat(plate.style.top);
 
     if (tapped === nextNumber) {
-      score++;
+      score++; totalScore++; combo++;
       nextNumber = nextNumber >= 9 ? 1 : nextNumber + 1;
+      anger = 0;
 
-      plate.style.transition = "all 0.3s";
-      plate.style.transform = "scale(2.2) rotate(45deg)";
-      plate.style.opacity = "0";
+      playSFX("good");
+      const txt = combo >= 5 ? `✨ ${combo} COMBO!` : combo >= 3 ? `🔥 ${combo} コンボ` : "よし！";
+      showEffect(txt, px, py, combo >= 3 ? "combo" : "good");
+
+      plate.style.transition = "all 0.28s ease";
+      plate.style.transform  = "scale(2) rotate(30deg)";
+      plate.style.opacity    = "0";
       setTimeout(() => plate.remove(), 300);
 
-      ghost.style.transform = "translateX(-50%) scale(1.28)";
-      setTimeout(() => ghost.style.transform = "translateX(-50%)", 220);
+      setFace("smile"); ghostBounce(1.2);
+      setTimeout(() => setFace("normal"), 600);
+      updateUI();
+      if (score >= 9) triggerNinthScene();
 
-      if (score % 9 === 0) {
-        specialNinth();   // 9枚目専用演出
-        levelUp();        // その後にレベルアップ
-      }
     } else {
-      plate.style.background = "rgba(255,80,80,0.9)";
-      plate.style.transform = "scale(0.7)";
+      combo = 0; anger++;
+      playSFX("bad");
+      showEffect("💔 ちがう！", px, py - 10, "bad");
+      plate.style.transition = "all 0.22s";
+      plate.style.transform  = "scale(0.6) rotate(-20deg)";
+      plate.style.opacity    = "0";
       setTimeout(() => plate.remove(), 250);
 
-      anger++;
-      ghost.style.transform = "translateX(-50%) scale(0.85)";
-      setTimeout(() => ghost.style.transform = "translateX(-50%)", 400);
-
-      if (anger >= 3) {
-        missPlate();
-        anger = 0;
-      }
+      setFace("angry"); ghostBounce(0.85);
+      setTimeout(() => setFace("normal"), 700);
+      updateUI();
+      if (anger >= 3) { anger = 0; missPlate(px + 40, py + 40); }
     }
-    updateUI();
   });
 }
 
-function missPlate() {
-  life--;
-  anger = 0;
-  ghost.style.transform = "translateX(-50%) scale(0.7)";
-  setTimeout(() => ghost.style.transform = "translateX(-50%)", 400);
+/* ── ミス ── */
+function missPlate(x = window.innerWidth / 2, y = window.innerHeight / 2) {
+  life--; combo = 0;
+  playSFX("bad");
+  missFlash.classList.add("active");
+  setTimeout(() => missFlash.classList.remove("active"), 180);
+  setFace("sad"); ghostBounce(0.75);
+  setTimeout(() => setFace("normal"), 800);
+  showEffect("😱 逃した！", x - 40, y, "bad");
   updateUI();
   if (life <= 0) endGame();
 }
 
+/* ── 9枚達成演出 ── */
+function triggerNinthScene() {
+  gameOverFlag = true;
+  clearInterval(spawnTimer);
+  document.querySelectorAll(".plate").forEach(p => p.remove());
+
+  playSFX("ninth");
+  setFace("angry");
+
+  const lines  = ["一枚……","二枚……","三枚……四枚……","五枚……六枚……","七枚……八枚……","九枚……","……あれ？","一枚足りないぃぃぃ！！！"];
+  const delays = [600, 600, 700, 800, 900, 1000, 1400, 200];
+
+  ninthOverlay.classList.add("show");
+  let idx = 0;
+  function showLine() {
+    if (idx >= lines.length) {
+      setTimeout(() => { ninthOverlay.classList.remove("show"); levelUp(); }, 1200);
+      return;
+    }
+    ninthText.innerHTML = lines[idx];
+    idx++;
+    setTimeout(showLine, delays[idx - 1] || 700);
+  }
+  setTimeout(showLine, 400);
+}
+
 function levelUp() {
-  round++;
-  speedMultiplier += 0.4;
-  score = 0;
-  nextNumber = 1;
+  round++; score = 0; nextNumber = 1; anger = 0; combo = 0;
+  speedMultiplier += 0.35;
+  setFace("normal");
+  gameOverFlag = false;
   updateUI();
+  startSpawning();
 }
 
-function specialNinth() {
-  setTimeout(() => {
-    document.body.style.transition = "background 1.2s";
-    document.body.style.background = "#0a0014";
-    
-    ghost.style.fontSize = "170px";
-    
-    setTimeout(() => {
-      ghost.innerHTML = "九枚……";
-      ghost.style.fontSize = "52px";
-      ghost.style.color = "#ff99ff";
-    }, 700);
-
-    setTimeout(() => {
-      ghost.innerHTML = "あれ？";
-    }, 1900);
-
-    setTimeout(() => {
-      ghost.innerHTML = "一枚足りないぃぃぃ！！";
-      ghost.style.fontSize = "56px";
-      speedMultiplier += 1.3; // 超高速化
-    }, 3000);
-  }, 300);
-}
-
-let spawnTimer;
+/* ── スポーン ── */
 function startSpawning() {
   if (spawnTimer) clearInterval(spawnTimer);
+  const interval = Math.max(420, 760 - (round - 1) * 30);
   spawnTimer = setInterval(() => {
+    if (gameOverFlag) return;
     createPlate();
-    if (Math.random() < 0.28) setTimeout(createPlate, 280);
-  }, 760);
+    if (Math.random() < 0.25 + (round - 1) * 0.04) setTimeout(createPlate, 270);
+  }, interval);
 }
 
+/* ── ゲームライフサイクル ── */
 function startGame() {
-  document.getElementById("startScreen").style.display = "none";
-  nextNumber = 1; score = 0; round = 1; life = 3; anger = 0;
-  speedMultiplier = 1;
-  gameOverFlag = false;
-  ghost.textContent = "👻";
-  ghost.style.fontSize = "130px";
-  document.body.style.background = "";
+  document.getElementById("startScreen").classList.remove("show");
+  document.getElementById("mute-btn").style.display = "block";
+
+  nextNumber = 1; score = 0; totalScore = 0;
+  round = 1; life = 3; anger = 0; combo = 0;
+  speedMultiplier = 1; gameOverFlag = false;
+
+  setFace("normal");
   updateUI();
+  playBGM();
   startSpawning();
 }
 
 function endGame() {
   gameOverFlag = true;
   clearInterval(spawnTimer);
-  document.getElementById("resultTitle").textContent = "💦 一枚足りなぁぁい…";
-  document.getElementById("finalScore").innerHTML = `周回 ${round-1} まで到達<br>合計 ${ (round-1)*9 + score } 枚`;
-  document.getElementById("gameOverScreen").style.display = "flex";
+  stopBGM();
+  document.querySelectorAll(".plate").forEach(p => p.remove());
+
+  setFace("sad");
+  playSFX("bad");
+
+  document.getElementById("resultTitle").textContent = "帰る……";
+  document.getElementById("finalScore").innerHTML =
+    `周回 <strong>${Math.max(0, round - 1)}</strong> 完了<br>合計 <strong>${totalScore}</strong> 枚のお皿を守ったよ！`;
+  document.getElementById("gameOverScreen").classList.add("show");
 }
 
 function restartGame() {
-  document.getElementById("gameOverScreen").style.display = "none";
+  document.getElementById("gameOverScreen").classList.remove("show");
   startGame();
 }
 
